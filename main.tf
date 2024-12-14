@@ -1,3 +1,25 @@
+data "aws_route53_zone" "sctp_zone" {
+  name = "sctp-sandbox.com"
+}
+
+data "aws_iam_policy_document" "bucket_policy" {
+  statement {
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+
+    actions = [
+      "s3:GetObject",
+    ]
+
+    resources = [
+      "${aws_s3_bucket.static_bucket.arn}/*",
+    ]
+  }
+}
+
+
 resource "aws_s3_bucket" "static_bucket" {
   bucket        = "tschui-s3.sctp-sandbox.com"
   force_destroy = true
@@ -15,6 +37,11 @@ resource "aws_s3_bucket_public_access_block" "enable_public_access" {
 
 resource "aws_s3_bucket_policy" "allow_public_access" {
   bucket = aws_s3_bucket.static_bucket.id
+  policy = data.aws_iam_policy_document.bucket_policy.json
+
+  depends_on = [aws_s3_bucket_public_access_block.enable_public_access]
+
+  /*
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -29,6 +56,7 @@ resource "aws_s3_bucket_policy" "allow_public_access" {
       }
     ]
   })
+  */
 
 }
 
@@ -38,10 +66,6 @@ resource "aws_s3_bucket_website_configuration" "website" {
   index_document {
     suffix = "index.html"
   }
-}
-
-data "aws_route53_zone" "sctp_zone" {
-  name = "sctp-sandbox.com"
 }
 
 resource "aws_route53_record" "www" {
